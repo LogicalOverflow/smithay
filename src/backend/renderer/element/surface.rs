@@ -262,9 +262,7 @@ where
             let data = states.data_map.get::<RendererSurfaceStateUserData>();
 
             if let Some(data) = data {
-                let data = &*data.borrow();
-
-                if let Some(view) = data.view() {
+                if let Some(view) = data.read().unwrap().view() {
                     location += view.offset.to_f64().to_physical(scale);
                     TraversalAction::DoChildren(location)
                 } else {
@@ -279,7 +277,7 @@ where
             let data = states.data_map.get::<RendererSurfaceStateUserData>();
 
             if let Some(data) = data {
-                let has_view = if let Some(view) = data.borrow().view() {
+                let has_view = if let Some(view) = data.read().unwrap().view() {
                     location += view.offset.to_f64().to_physical(scale);
                     true
                 } else {
@@ -354,7 +352,7 @@ impl<R: Renderer + ImportAll> WaylandSurfaceRenderElement<R> {
     fn size(&self, scale: impl Into<Scale<f64>>) -> Size<i32, Physical> {
         compositor::with_states(&self.surface, |states| {
             let data = states.data_map.get::<RendererSurfaceStateUserData>();
-            data.and_then(|d| d.borrow().view()).map(|surface_view| {
+            data.and_then(|d| d.read().unwrap().view()).map(|surface_view| {
                 ((surface_view.dst.to_f64().to_physical(scale).to_point() + self.location).to_i32_round()
                     - self.location.to_i32_round())
                 .to_size()
@@ -372,7 +370,7 @@ impl<R: Renderer + ImportAll> Element for WaylandSurfaceRenderElement<R> {
     fn current_commit(&self) -> CommitCounter {
         compositor::with_states(&self.surface, |states| {
             let data = states.data_map.get::<RendererSurfaceStateUserData>();
-            data.map(|d| d.borrow().current_commit())
+            data.map(|d| d.read().unwrap().current_commit())
         })
         .unwrap_or_default()
     }
@@ -385,17 +383,15 @@ impl<R: Renderer + ImportAll> Element for WaylandSurfaceRenderElement<R> {
         compositor::with_states(&self.surface, |states| {
             let data = states.data_map.get::<RendererSurfaceStateUserData>();
             if let Some(data) = data {
-                let data = data.borrow();
+                let data = data.read().unwrap();
 
-                if let Some(view) = data.view() {
-                    Some(view.src.to_buffer(
+                data.view().map(|view| {
+                    view.src.to_buffer(
                         data.buffer_scale as f64,
                         data.buffer_transform,
                         &data.buffer_size().unwrap().to_f64(),
-                    ))
-                } else {
-                    None
-                }
+                    )
+                })
             } else {
                 None
             }
@@ -406,7 +402,7 @@ impl<R: Renderer + ImportAll> Element for WaylandSurfaceRenderElement<R> {
     fn transform(&self) -> Transform {
         compositor::with_states(&self.surface, |states| {
             let data = states.data_map.get::<RendererSurfaceStateUserData>();
-            data.map(|d| d.borrow().buffer_transform)
+            data.map(|d| d.read().unwrap().buffer_transform)
         })
         .unwrap_or_default()
     }
@@ -417,7 +413,7 @@ impl<R: Renderer + ImportAll> Element for WaylandSurfaceRenderElement<R> {
         compositor::with_states(&self.surface, |states| {
             let data = states.data_map.get::<RendererSurfaceStateUserData>();
             data.and_then(|d| {
-                let data = d.borrow();
+                let data = d.read().unwrap();
                 if let Some(surface_view) = data.view() {
                     let damage = data
                         .damage_since(commit)
@@ -468,7 +464,7 @@ impl<R: Renderer + ImportAll> Element for WaylandSurfaceRenderElement<R> {
         compositor::with_states(&self.surface, |states| {
             let data = states.data_map.get::<RendererSurfaceStateUserData>();
             data.map(|d| {
-                let data = d.borrow();
+                let data = d.read().unwrap();
                 data.opaque_regions()
                     .map(|r| {
                         r.iter()
@@ -505,7 +501,7 @@ where
     fn underlying_storage(&self, _renderer: &mut R) -> Option<UnderlyingStorage> {
         compositor::with_states(&self.surface, |states| {
             let data = states.data_map.get::<RendererSurfaceStateUserData>();
-            data.and_then(|d| d.borrow().buffer().cloned())
+            data.and_then(|d| d.read().unwrap().buffer().cloned())
                 .map(UnderlyingStorage::Wayland)
         })
     }
@@ -522,7 +518,7 @@ where
         compositor::with_states(&self.surface, |states| {
             let data = states.data_map.get::<RendererSurfaceStateUserData>();
             if let Some(data) = data {
-                let data = data.borrow();
+                let data = data.read().unwrap();
 
                 if let Some(texture) = data.texture::<R>(frame.id()) {
                     frame.render_texture_from_to(
