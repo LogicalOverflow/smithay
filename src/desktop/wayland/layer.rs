@@ -294,7 +294,7 @@ impl LayerMap {
                 }
 
                 let data = with_states(surface, |states| {
-                    *states.cached_state.current::<LayerSurfaceCachedState>()
+                    *states.cached_state.get::<LayerSurfaceCachedState>().current()
                 });
 
                 let mut source = match data.exclusive_zone {
@@ -531,7 +531,7 @@ impl LayerSurface {
     /// Returns the cached protocol state
     pub fn cached_state(&self) -> LayerSurfaceCachedState {
         with_states(self.0.surface.wl_surface(), |states| {
-            *states.cached_state.current::<LayerSurfaceCachedState>()
+            *states.cached_state.get::<LayerSurfaceCachedState>().current()
         })
     }
 
@@ -540,7 +540,8 @@ impl LayerSurface {
         with_states(self.0.surface.wl_surface(), |states| {
             match states
                 .cached_state
-                .current::<LayerSurfaceCachedState>()
+                .get::<LayerSurfaceCachedState>()
+                .current()
                 .keyboard_interactivity
             {
                 KeyboardInteractivity::Exclusive | KeyboardInteractivity::OnDemand => true,
@@ -552,7 +553,11 @@ impl LayerSurface {
     /// Returns the layer this surface resides on, if any yet.
     pub fn layer(&self) -> WlrLayer {
         with_states(self.0.surface.wl_surface(), |states| {
-            states.cached_state.current::<LayerSurfaceCachedState>().layer
+            states
+                .cached_state
+                .get::<LayerSurfaceCachedState>()
+                .current()
+                .layer
         })
     }
 

@@ -67,8 +67,9 @@ where
                 // Ensure surface has no existing buffers attached.
                 let has_buffer = compositor::with_states(&surface, |states| {
                     let cached = &states.cached_state;
-                    let pending = cached.pending::<SurfaceAttributes>().buffer.is_some();
-                    let current = cached.current::<SurfaceAttributes>().buffer.is_some();
+                    let mut guard = cached.get::<SurfaceAttributes>();
+                    let pending = guard.pending().buffer.is_some();
+                    let current = guard.current().buffer.is_some();
                     pending || current
                 });
                 if has_buffer {
@@ -114,7 +115,8 @@ where
 
                         // Verify the attached buffer: ext-session-lock requires no NULL buffers
                         // and an exact dimentions match.
-                        let surface_attrs = states.cached_state.pending::<SurfaceAttributes>();
+                        let mut guard = states.cached_state.get::<SurfaceAttributes>();
+                        let surface_attrs = guard.pending();
                         if let Some(assignment) = surface_attrs.buffer.as_ref() {
                             match assignment {
                                 BufferAssignment::Removed => {
